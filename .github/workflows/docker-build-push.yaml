@@ -61,7 +61,7 @@ jobs:
 #            quay.io/galaxyproject/galaxy-k8s-auto:${{ steps.commit.outputs.short_sha }}=quay.expires-after=90d
             ksuderman/galaxy-min:${{ steps.branch.outputs.name }}=production
             ksuderman/galaxy-k8s-auto:${{ steps.commit.outputs.sha }}=quay.expires-after=90d
-          buildArgs: |
+          build-args: |
             GIT_COMMIT=$(git rev-parse HEAD)
             BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
             IMAGE_TAG=${{ steps.branch.outputs.name }}
