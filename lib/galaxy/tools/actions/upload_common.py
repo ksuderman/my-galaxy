@@ -84,7 +84,7 @@ class LibraryParams:
 
 
 def handle_library_params(
-    trans, params, folder_id: str, replace_dataset: Optional[LibraryDataset] = None
+    trans, params, folder_id: int, replace_dataset: Optional[LibraryDataset] = None
 ) -> LibraryParams:
     # FIXME: the received params has already been parsed by util.Params() by the time it reaches here,
     # so no complex objects remain.  This is not good because it does not allow for those objects to be
@@ -93,7 +93,7 @@ def handle_library_params(
     # See if we have any template field contents
     template_field_contents = {}
     template_id = params.get("template_id", None)
-    folder = trans.sa_session.query(LibraryFolder).get(trans.security.decode_id(folder_id))
+    folder = trans.sa_session.query(LibraryFolder).get(folder_id)
     # We are inheriting the folder's info_association, so we may have received inherited contents or we may have redirected
     # here after the user entered template contents ( due to errors ).
     template: Optional[FormDefinition] = None
@@ -422,10 +422,11 @@ def active_folders(trans, folder):
     # Stolen from galaxy.web.controllers.library_common (importing from which causes a circular issues).
     # Much faster way of retrieving all active sub-folders within a given folder than the
     # performance of the mapper.  This query also eagerloads the permissions on each folder.
+    raise
     return (
         trans.sa_session.query(LibraryFolder)
         .filter_by(parent=folder, deleted=False)
-        .options(joinedload("actions"))
+        .options(joinedload(LibraryFolder.actions))
         .order_by(LibraryFolder.table.c.name)
         .all()
     )

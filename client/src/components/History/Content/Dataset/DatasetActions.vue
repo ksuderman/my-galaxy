@@ -33,7 +33,7 @@
                     <span class="fa fa-info-circle" />
                 </b-button>
                 <b-button
-                    v-if="showRerun"
+                    v-if="writable && showRerun"
                     class="rerun-btn px-1"
                     title="Run Job Again"
                     size="sm"
@@ -44,7 +44,7 @@
                 </b-button>
                 <b-button
                     v-if="showVisualizations"
-                    class="px-1"
+                    class="visualize-btn px-1"
                     title="Visualize"
                     size="sm"
                     variant="link"
@@ -70,9 +70,8 @@
 </template>
 
 <script>
-import { legacyNavigationMixin } from "components/plugins/legacyNavigation";
 import { copy as sendToClipboard } from "utils/clipboard";
-import { absPath, prependPath } from "utils/redirect.js";
+import { absPath, prependPath } from "@/utils/redirect";
 import { downloadUrlMixin } from "./mixins.js";
 import DatasetDownload from "./DatasetDownload";
 
@@ -80,9 +79,10 @@ export default {
     components: {
         DatasetDownload,
     },
-    mixins: [legacyNavigationMixin, downloadUrlMixin],
+    mixins: [downloadUrlMixin],
     props: {
         item: { type: Object, required: true },
+        writable: { type: Boolean, default: true },
         showHighlight: { type: Boolean, default: false },
         itemUrls: { type: Object, required: true },
     },
@@ -130,26 +130,17 @@ export default {
             window.location.href = resource;
         },
         onError() {
-            this.backboneRoute(this.itemUrls.reportError);
+            this.$router.push(this.itemUrls.reportError);
         },
         onInfo() {
-            this.backboneRoute(this.itemUrls.showDetails);
+            this.$router.push(this.itemUrls.showDetails);
         },
         onRerun() {
-            this.backboneRoute(`root?job_id=${this.item.creating_job}`);
+            this.$router.push(`/root?job_id=${this.item.creating_job}`, { force: true });
         },
         onVisualize() {
-            const name = this.item.name || "";
-            const title = `Visualization of ${name}`;
-            const path = this.itemUrls.visualize;
-            const redirectParams = {
-                path: path,
-                title: title,
-                tryIframe: false,
-            };
-            if (!this.iframeAdd(redirectParams)) {
-                this.backboneRoute(path);
-            }
+            const title = `Visualization of ${this.item.name || ""}`;
+            this.$router.push(this.itemUrls.visualize, { title });
         },
         onHighlight() {
             this.$emit("toggleHighlights");

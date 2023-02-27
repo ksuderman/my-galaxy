@@ -2,7 +2,7 @@
     <div>
         <SidePanel id="left" side="left">
             <template v-slot:panel>
-                <MarkdownToolBox :get-manager="getManager" @onInsert="onInsert" />
+                <MarkdownToolBox :steps="steps" @onInsert="onInsert" />
             </template>
         </SidePanel>
         <div id="center" class="workflow-markdown-editor">
@@ -35,6 +35,7 @@
                 </div>
             </div>
         </div>
+        <MarkdownHelp ref="help" />
     </div>
 </template>
 
@@ -47,7 +48,7 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { faQuestion } from "@fortawesome/free-solid-svg-icons";
 import MarkdownToolBox from "./MarkdownToolBox";
 import SidePanel from "components/Panels/SidePanel";
-import { showMarkdownHelp } from "./markdownHelp";
+import MarkdownHelp from "./MarkdownHelp";
 
 Vue.use(BootstrapVue);
 
@@ -60,6 +61,7 @@ export default {
         MarkdownToolBox,
         SidePanel,
         FontAwesomeIcon,
+        MarkdownHelp,
     },
     props: {
         markdownText: {
@@ -70,9 +72,9 @@ export default {
             type: Object,
             default: null,
         },
-        getManager: {
-            type: Function,
-            default: null,
+        steps: {
+            type: Object,
+            required: true,
         },
         title: {
             type: String,
@@ -111,7 +113,7 @@ export default {
             this.$emit("onUpdate", this.content);
         }, 300),
         onHelp() {
-            showMarkdownHelp();
+            this.$refs.help.showMarkdownHelp();
         },
     },
 };

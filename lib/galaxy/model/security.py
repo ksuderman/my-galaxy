@@ -1146,7 +1146,7 @@ class GalaxyRBACAgent(RBACAgent):
         private_role = self.get_private_user_role(trans.user)
         access_roles = dataset.get_access_roles(self)
 
-        if len(access_roles) != 1:
+        if len(access_roles) != 1 or private_role is None:
             return False
         else:
             if access_roles[0].id == private_role.id:
@@ -1507,12 +1507,15 @@ class GalaxyRBACAgent(RBACAgent):
             return True, ""
         action = self.permitted_actions.DATASET_ACCESS
 
+        raise
         lddas = (
             self.sa_session.query(self.model.LibraryDatasetDatasetAssociation)
             .join("library_dataset")
             .filter(self.model.LibraryDataset.folder == folder)
             .join("dataset")
-            .options(joinedload("dataset").joinedload("actions"))
+            .options(
+                joinedload(self.model.LibraryDatasetDatasetAssociation.dataset).joinedload(self.model.Dataset.actions)
+            )
             .all()
         )
 

@@ -5,7 +5,9 @@
             :class="['toolSectionTitle', `tool-menu-section-${sectionName}`]"
             :title="title"
             @mouseover="hover = true"
-            @mouseleave="hover = false">
+            @mouseleave="hover = false"
+            @focus="hover = true"
+            @blur="hover = false">
             <a class="title-link" href="javascript:void(0)" @click="toggleMenu()">
                 <span class="name">
                     {{ name }}
@@ -15,7 +17,7 @@
         </div>
         <transition name="slide">
             <div v-if="opened">
-                <template v-for="[key, el] in category.elems.entries()">
+                <template v-for="[key, el] in sortedElements">
                     <ToolPanelLabel v-if="category.text" :key="key" :definition="el" />
                     <tool
                         v-else
@@ -50,6 +52,8 @@ import Tool from "./Tool";
 import ToolPanelLabel from "./ToolPanelLabel";
 import ariaAlert from "utils/ariaAlert";
 import ToolPanelLinks from "./ToolPanelLinks";
+
+import { useConfig } from "composables/config";
 
 export default {
     name: "ToolSection",
@@ -93,6 +97,17 @@ export default {
             type: Boolean,
             default: false,
         },
+        sortItems: {
+            type: Boolean,
+            default: true,
+        },
+    },
+    setup() {
+        const { config, isLoaded } = useConfig();
+        return {
+            config,
+            isLoaded,
+        };
     },
     data() {
         return {
@@ -116,6 +131,34 @@ export default {
         links() {
             return this.category.links || {};
         },
+        sortedElements() {
+            // If this.config.sortTools is true, sort the tools alphabetically
+            // When administrators have manually inserted labels we respect
+            // the order set and hope for the best from the integrated
+            // panel.
+            if (
+                this.isLoaded &&
+                this.config.toolbox_auto_sort === true &&
+                this.sortItems === true &&
+                !this.category.elems.some((el) => el.text !== undefined && el.text !== "")
+            ) {
+                const elements = [...this.category.elems];
+                const sorted = elements.sort((a, b) => {
+                    const aNameLower = a.name.toLowerCase();
+                    const bNameLower = b.name.toLowerCase();
+                    if (aNameLower > bNameLower) {
+                        return 1;
+                    } else if (aNameLower < bNameLower) {
+                        return -1;
+                    } else {
+                        return 0;
+                    }
+                });
+                return Object.entries(sorted);
+            } else {
+                return Object.entries(this.category.elems);
+            }
+        },
     },
     watch: {
         queryFilter() {
@@ -129,13 +172,17 @@ export default {
         },
     },
     created() {
-        this.eventHub.$on("openToolSection", (sectionId) => {
+        this.eventHub.$on("openToolSection", this.openToolSection);
+    },
+    beforeDestroy() {
+        this.eventHub.$off("openToolSection", this.openToolSection);
+    },
+    methods: {
+        openToolSection(sectionId) {
             if (this.isSection && sectionId == this.category?.id) {
                 this.toggleMenu(true);
             }
-        });
-    },
-    methods: {
+        },
         checkFilter() {
             return !this.disableFilter && !!this.queryFilter;
         },

@@ -11,6 +11,8 @@ import threading
 from io import BytesIO
 from typing import (
     List,
+    NamedTuple,
+    Optional,
     TYPE_CHECKING,
 )
 
@@ -75,6 +77,7 @@ def quay_repository(namespace, pkg_name, session=None):
 
 
 def _get_namespace(namespace: str) -> List[str]:
+    log.debug(f"Querying {QUAY_REPOSITORY_API_ENDPOINT} for repos within {namespace}")
     next_page = None
     repo_names = []
     repos_headers = {"Accept-encoding": "gzip", "Accept": "application/json"}
@@ -198,7 +201,11 @@ def version_sorted(elements):
     return [e.tag for e in elements]
 
 
-Target = collections.namedtuple("Target", ["package_name", "version", "build", "package"])
+class Target(NamedTuple):
+    package_name: str
+    version: Optional[str]
+    build: Optional[str]
+    package: Optional[str]
 
 
 def build_target(package_name, version=None, build=None, tag=None):

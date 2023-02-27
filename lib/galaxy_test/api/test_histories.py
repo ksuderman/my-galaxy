@@ -11,6 +11,10 @@ from galaxy.model.unittest_utils.store_fixtures import (
 )
 from galaxy_test.api.sharable import SharingApiTests
 from galaxy_test.base.api_asserts import assert_has_keys
+from galaxy_test.base.decorators import (
+    requires_admin,
+    requires_new_user,
+)
 from galaxy_test.base.populators import (
     DatasetCollectionPopulator,
     DatasetPopulator,
@@ -32,7 +36,7 @@ class BaseHistories:
         post_data = dict(name=name)
         create_response = self._post("histories", data=post_data).json()
         self._assert_has_keys(create_response, "name", "id")
-        self.assertEqual(create_response["name"], name)
+        assert create_response["name"] == name
         return create_response
 
     def _assert_history_length(self, history_id, n):
@@ -42,7 +46,7 @@ class BaseHistories:
         assert len(contents) == n, contents
 
 
-class HistoriesApiTestCase(ApiTestCase, BaseHistories):
+class TestHistoriesApi(ApiTestCase, BaseHistories):
     def setUp(self):
         super().setUp()
         self.dataset_populator = DatasetPopulator(self.galaxy_interactor)
@@ -56,14 +60,14 @@ class HistoriesApiTestCase(ApiTestCase, BaseHistories):
         # Make sure new history appears in index of user's histories.
         index_response = self._get("histories").json()
         indexed_history = [h for h in index_response if h["id"] == created_id][0]
-        self.assertEqual(indexed_history["name"], "TestHistory1")
+        assert indexed_history["name"] == "TestHistory1"
 
     def test_create_history_json(self):
         name = "TestHistoryJson"
         post_data = dict(name=name)
         create_response = self._post("histories", data=post_data, json=True).json()
         self._assert_has_keys(create_response, "name", "id")
-        self.assertEqual(create_response["name"], name)
+        assert create_response["name"] == name
         return create_response
 
     def test_show_history(self):
@@ -249,6 +253,7 @@ class HistoriesApiTestCase(ApiTestCase, BaseHistories):
         create_response = self._post("histories", data=post_data, anon=True)
         self._assert_status_code_is(create_response, 403)
 
+    @requires_admin
     def test_create_without_session_fails(self):
         post_data = dict(name="SessionNeeded")
         # Using admin=True will boostrap an Admin user without session
@@ -504,7 +509,6 @@ class ImportExportTests(BaseHistories):
         )
 
     def _import_history_and_wait(self, import_data, history_name, wait_on_history_length=None):
-
         imported_history_id = self.dataset_populator.import_history_and_wait_for_name(import_data, history_name)
 
         if wait_on_history_length:
@@ -556,7 +560,7 @@ class ImportExportTests(BaseHistories):
             elements_checker(imported_collection_metadata["elements"])
 
 
-class ImportExportHistoryTestCase(ApiTestCase, ImportExportTests):
+class TestImportExportHistory(ApiTestCase, ImportExportTests):
     task_based = False
 
     def setUp(self):
@@ -564,7 +568,7 @@ class ImportExportHistoryTestCase(ApiTestCase, ImportExportTests):
         self._set_up_populators()
 
 
-class SharingHistoryTestCase(ApiTestCase, BaseHistories, SharingApiTests):
+class TestSharingHistory(ApiTestCase, BaseHistories, SharingApiTests):
     """Tests specific for the particularities of sharing Histories."""
 
     api_name = "histories"
@@ -581,6 +585,7 @@ class SharingHistoryTestCase(ApiTestCase, BaseHistories, SharingApiTests):
         super().setUp()
         self.dataset_populator = DatasetPopulator(self.galaxy_interactor)
 
+    @requires_new_user
     def test_sharing_with_private_datasets(self):
         history_id = self.dataset_populator.new_history()
         hda = self.dataset_populator.new_dataset(history_id)
@@ -607,6 +612,8 @@ class SharingHistoryTestCase(ApiTestCase, BaseHistories, SharingApiTests):
         assert sharing_response["users_shared_with"]
         assert sharing_response["users_shared_with"][0]["id"] == target_user_id
 
+    @requires_admin
+    @requires_new_user
     def test_sharing_without_manage_permissions(self):
         history_id = self.dataset_populator.new_history()
         hda = self.dataset_populator.new_dataset(history_id)
@@ -649,6 +656,7 @@ class SharingHistoryTestCase(ApiTestCase, BaseHistories, SharingApiTests):
         assert sharing_response["users_shared_with"]
         assert sharing_response["users_shared_with"][0]["id"] == target_user_id
 
+    @requires_new_user
     def test_sharing_empty_not_allowed(self):
         history_id = self.dataset_populator.new_history()
 
@@ -661,6 +669,7 @@ class SharingHistoryTestCase(ApiTestCase, BaseHistories, SharingApiTests):
         assert sharing_response["errors"]
         assert "empty" in sharing_response["errors"][0]
 
+    @requires_new_user
     def test_sharing_with_duplicated_users(self):
         history_id = self.create("HistoryToShareWithDuplicatedUser")
 
@@ -674,6 +683,7 @@ class SharingHistoryTestCase(ApiTestCase, BaseHistories, SharingApiTests):
         assert len(sharing_response["users_shared_with"]) == 1
         assert sharing_response["users_shared_with"][0]["id"] == target_user_id
 
+    @requires_new_user
     def test_sharing_private_history_makes_datasets_public(self):
         history_id = self.dataset_populator.new_history()
         hda = self.dataset_populator.new_dataset(history_id)

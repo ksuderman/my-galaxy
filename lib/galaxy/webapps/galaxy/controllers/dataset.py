@@ -13,12 +13,12 @@ from galaxy import (
     util,
     web,
 )
-from galaxy.datatypes import sniff
 from galaxy.datatypes.data import DatatypeConverterNotFoundException
 from galaxy.datatypes.display_applications.util import (
     decode_dataset_user,
     encode_dataset_user,
 )
+from galaxy.datatypes.sniff import guess_ext
 from galaxy.exceptions import RequestParameterInvalidException
 from galaxy.managers.hdas import (
     HDADeserializer,
@@ -291,6 +291,10 @@ class DatasetInterface(BaseUIController, UsesAnnotations, UsesItemRatings, UsesE
             if data.missing_meta():
                 message = 'Required metadata values are missing. Some of these values may not be editable by the user. Selecting "Auto-detect" will attempt to fix these values.'
                 status = "warning"
+            metadata_disable = data.state not in [
+                trans.model.Dataset.states.OK,
+                trans.model.Dataset.states.FAILED_METADATA,
+            ]
             # datatype conversion
             conversion_options = [
                 (f"{convert_id} (using '{convert_name}')", convert_id)
@@ -369,6 +373,7 @@ class DatasetInterface(BaseUIController, UsesAnnotations, UsesItemRatings, UsesE
                 "message": message,
                 "status": status,
                 "dataset_id": dataset_id,
+                "metadata_disable": metadata_disable,
                 "attribute_inputs": attribute_inputs,
                 "conversion_inputs": conversion_inputs,
                 "conversion_disable": conversion_disable,
@@ -430,7 +435,7 @@ class DatasetInterface(BaseUIController, UsesAnnotations, UsesItemRatings, UsesE
                     )
                 else:
                     path = data.dataset.file_name
-                    datatype = sniff.guess_ext(path, trans.app.datatypes_registry.sniff_order)
+                    datatype = guess_ext(path, trans.app.datatypes_registry.sniff_order)
                     trans.app.datatypes_registry.change_datatype(data, datatype)
                     trans.sa_session.flush()
                     job, *_ = trans.app.datatypes_registry.set_external_metadata_tool.tool_action.execute(
@@ -459,7 +464,8 @@ class DatasetInterface(BaseUIController, UsesAnnotations, UsesItemRatings, UsesE
             payload_permissions = {}
             for key, value in {"DATASET_MANAGE_PERMISSIONS": "manage_ids", "DATASET_ACCESS": "access_ids"}.items():
                 role_ids = util.listify(payload.get(key))
-                payload_permissions[f"{value}[]"] = role_ids
+                decoded_role_ids = list(map(self.decode_id, role_ids))
+                payload_permissions[f"{value}[]"] = decoded_role_ids
 
             self.hda_manager.update_permissions(
                 trans,
@@ -555,23 +561,6 @@ class DatasetInterface(BaseUIController, UsesAnnotations, UsesItemRatings, UsesE
         return
 
     @web.expose
-    @web.require_login("rate items")
-    @web.json
-    def rate_async(self, trans, id, rating):
-        """Rate a dataset asynchronously and return updated community data."""
-
-        decoded_id = self.decode_id(id)
-        dataset = self.hda_manager.get_accessible(decoded_id, trans.user)
-        dataset = self.hda_manager.error_if_uploading(dataset)
-        if not dataset:
-            return trans.show_error_message("The specified dataset does not exist.")
-
-        # Rate dataset.
-        self.rate_item(trans.sa_session, trans.get_user(), dataset, rating)
-
-        return self.get_ave_item_rating_data(trans.sa_session, dataset)
-
-    @web.expose
     def display_by_username_and_slug(self, trans, username, slug, filename=None, preview=True):
         """Display dataset by username and slug; because datasets do not yet have slugs, the slug is the dataset's id."""
         dataset = self._check_dataset(trans, slug)
@@ -599,42 +588,13 @@ class DatasetInterface(BaseUIController, UsesAnnotations, UsesItemRatings, UsesE
             trans.response.set_content_type(dataset.get_mime())
             return open(dataset.file_name, "rb")
         else:
-            # Get rating data.
-            user_item_rating = 0
-            if trans.get_user():
-                user_item_rating = self.get_user_item_rating(trans.sa_session, trans.get_user(), dataset)
-                if user_item_rating:
-                    user_item_rating = user_item_rating.rating
-                else:
-                    user_item_rating = 0
-            ave_item_rating, num_ratings = self.get_ave_item_rating_data(trans.sa_session, dataset)
-
             return trans.fill_template_mako(
                 "/dataset/display.mako",
                 item=dataset,
                 item_data=dataset_data,
                 truncated=truncated,
-                user_item_rating=user_item_rating,
-                ave_item_rating=ave_item_rating,
-                num_ratings=num_ratings,
                 first_chunk=first_chunk,
             )
-
-    @web.expose
-    def get_item_content_async(self, trans, id):
-        """Returns item content in HTML format."""
-
-        decoded_id = self.decode_id(id)
-        dataset = self.hda_manager.get_accessible(decoded_id, trans.user)
-        dataset = self.hda_manager.error_if_uploading(dataset)
-        if dataset is None:
-            raise web.httpexceptions.HTTPNotFound()
-        truncated, dataset_data = self.hda_manager.text_data(dataset, preview=True)
-        # Get annotation.
-        dataset.annotation = self.get_item_annotation_str(trans.sa_session, trans.user, dataset)
-        return trans.fill_template_mako(
-            "/dataset/item_content.mako", item=dataset, item_data=dataset_data, truncated=truncated
-        )
 
     @web.expose
     def annotate_async(self, trans, id, new_annotation=None, **kwargs):

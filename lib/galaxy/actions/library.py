@@ -88,7 +88,7 @@ class LibraryActions:
     Mixin for controllers that provide library functionality.
     """
 
-    def _upload_dataset(self, trans, folder_id: str, replace_dataset: Optional[LibraryDataset] = None, **kwd):
+    def _upload_dataset(self, trans, folder_id: int, replace_dataset: Optional[LibraryDataset] = None, **kwd):
         # Set up the traditional tool state/params
         cntrller = "api"
         tool_id = "upload1"
@@ -213,7 +213,7 @@ class LibraryActions:
         (files_and_folders, _response_code, _message) = self._get_path_files_and_folders(params, preserve_dirs)
         if _response_code:
             return (uploaded_datasets, _response_code, _message)
-        for (path, name, folder) in files_and_folders:
+        for path, name, folder in files_and_folders:
             uploaded_datasets.append(
                 self._make_library_uploaded_dataset(trans, params, name, path, "path_paste", library_bunch, folder)
             )
@@ -224,7 +224,7 @@ class LibraryActions:
         if problem_response:
             return problem_response
         files_and_folders = []
-        for (line, path) in self._paths_list(params):
+        for line, path in self._paths_list(params):
             line_files_and_folders = self._get_single_path_files_and_folders(line, path, preserve_dirs)
             files_and_folders.extend(line_files_and_folders)
         return files_and_folders, None, None
@@ -257,7 +257,7 @@ class LibraryActions:
             response_code = 400
             return None, response_code, message
         bad_paths = []
-        for (_, path) in self._paths_list(params):
+        for _, path in self._paths_list(params):
             if not os.path.exists(path):
                 bad_paths.append(path)
         if bad_paths:
@@ -302,13 +302,11 @@ class LibraryActions:
             trans.sa_session.flush()
         return uploaded_dataset
 
-    def _create_folder(self, trans, parent_id, library_id, **kwd):
+    def _create_folder(self, trans, parent_id: int, **kwd):
         is_admin = trans.user_is_admin
         current_user_roles = trans.get_current_user_roles()
         try:
-            parent_folder = trans.sa_session.query(trans.app.model.LibraryFolder).get(
-                trans.security.decode_id(parent_id)
-            )
+            parent_folder = trans.sa_session.query(trans.app.model.LibraryFolder).get(parent_id)
         except Exception:
             parent_folder = None
         # Check the library which actually contains the user-supplied parent folder, not the user-supplied

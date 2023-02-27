@@ -15,6 +15,7 @@ from typing import (
     List,
     NamedTuple,
     Optional,
+    TYPE_CHECKING,
     Union,
 )
 
@@ -31,6 +32,9 @@ from galaxy.util import (
     ExecutionTimer,
 )
 from galaxy.util.hash_util import HASH_NAME_MAP
+
+if TYPE_CHECKING:
+    from galaxy.model.store import ModelExportStore
 
 log = logging.getLogger(__name__)
 
@@ -353,9 +357,7 @@ class ModelPersistenceContext(metaclass=abc.ABCMeta):
             element_datasets["paths"].append(filename)
 
         self.add_tags_to_datasets(datasets=element_datasets["datasets"], tag_lists=element_datasets["tag_lists"])
-        for (element_identifiers, dataset) in zip(
-            element_datasets["element_identifiers"], element_datasets["datasets"]
-        ):
+        for element_identifiers, dataset in zip(element_datasets["element_identifiers"], element_datasets["datasets"]):
             current_builder = root_collection_builder
             for element_identifier in element_identifiers[:-1]:
                 current_builder = current_builder.get_level(element_identifier)
@@ -395,25 +397,29 @@ class ModelPersistenceContext(metaclass=abc.ABCMeta):
             else:
                 dataset.set_size(no_extra_files=True)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def tag_handler(self):
         """Return a galaxy.model.tags.TagHandler-like object for persisting tags."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         """If bound to a database, return the user the datasets should be created for.
 
         Return None otherwise.
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def sa_session(self) -> Optional[ScopedSession]:
         """If bound to a database, return the SQL Alchemy session.
 
         Return None otherwise.
         """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def permission_provider(self) -> "PermissionProvider":
         """If bound to a database, return the SQL Alchemy session.
 
@@ -424,19 +430,23 @@ class ModelPersistenceContext(metaclass=abc.ABCMeta):
         """No-op, no job context."""
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def job(self) -> Optional[galaxy.model.Job]:
         """Return associated job object if bound to a job finish context connected to a database."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def metadata_source_provider(self) -> "MetadataSourceProvider":
         """Return associated MetadataSourceProvider object."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def object_store(self) -> ObjectStore:
         """Return object store to use for populating discovered dataset contents."""
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def flush_per_n_datasets(self) -> Optional[int]:
         pass
 
@@ -456,18 +466,21 @@ class ModelPersistenceContext(metaclass=abc.ABCMeta):
     def add_output_dataset_association(self, name, dataset):
         """If discovering outputs for a job, persist output dataset association."""
 
+    @abc.abstractmethod
     def add_datasets_to_history(self, datasets, for_output_dataset=None):
         """Add datasets to the history this context points at."""
 
     def job_id(self):
         return ""
 
+    @abc.abstractmethod
     def persist_object(self, obj):
         """Add the target to the persistence layer."""
 
-    def persist_library_folder(self, library_folder):
+    def persist_library_folder(self, library_folder: galaxy.model.LibraryFolder) -> None:  # noqa: B027
         """Add library folder to sessionless export. Noop for session export."""
 
+    @abc.abstractmethod
     def flush(self):
         """If database bound, flush the persisted objects to ensure IDs."""
 
@@ -527,7 +540,7 @@ class UnusedMetadataSourceProvider(MetadataSourceProvider):
 class SessionlessModelPersistenceContext(ModelPersistenceContext):
     """A variant of ModelPersistenceContext that persists to an export store instead of database directly."""
 
-    def __init__(self, object_store, export_store, working_directory):
+    def __init__(self, object_store, export_store: "ModelExportStore", working_directory: str) -> None:
         self._permission_provider = UnusedPermissionProvider()
         self._metadata_source_provider = UnusedMetadataSourceProvider()
         self._object_store = object_store
@@ -602,7 +615,7 @@ class SessionlessModelPersistenceContext(ModelPersistenceContext):
         parent_folder.folders.append(nested_folder)
         return nested_folder
 
-    def persist_library_folder(self, library_folder):
+    def persist_library_folder(self, library_folder: galaxy.model.LibraryFolder) -> None:
         self.export_store.export_library_folder(library_folder)
 
     def add_datasets_to_history(self, datasets, for_output_dataset=None):

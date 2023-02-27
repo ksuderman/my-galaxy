@@ -7,9 +7,9 @@ import os
 import shutil
 
 try:
-    from kamaki.clients import astakos
-    from kamaki.clients import Client as KamakiClient
     from kamaki.clients import (
+        astakos,
+        Client as KamakiClient,
         ClientError,
         pithos,
         utils,
@@ -26,7 +26,7 @@ from galaxy.util import (
     umask_fix_perms,
 )
 from galaxy.util.path import safe_relpath
-from ..objectstore import ConcreteObjectStore
+from . import ConcreteObjectStore
 
 NO_KAMAKI_ERROR_MESSAGE = (
     "ObjectStore configured, but no kamaki.clients dependency available."

@@ -32,11 +32,11 @@ from galaxy.util import (
 )
 from galaxy.util.path import safe_relpath
 from galaxy.util.sleeper import Sleeper
-from .s3_multipart_upload import multipart_upload
-from ..objectstore import (
+from . import (
     ConcreteObjectStore,
     convert_bytes,
 )
+from .s3_multipart_upload import multipart_upload
 
 NO_BOTO_ERROR_MESSAGE = (
     "S3/Swift object store configured, but no boto dependency available."
@@ -455,6 +455,10 @@ class S3ObjectStore(ConcreteObjectStore, CloudConfigMixin):
         try:
             log.debug("Pulling key '%s' into cache to %s", rel_path, self._get_cache_path(rel_path))
             key = self._bucket.get_key(rel_path)
+            if key is None:
+                message = f"Attempting to download an invalid key for path {rel_path}."
+                log.critical(message)
+                raise Exception(message)
             # Test if cache is large enough to hold the new file
             if self.cache_size > 0 and key.size > self.cache_size:
                 log.critical(
@@ -589,7 +593,6 @@ class S3ObjectStore(ConcreteObjectStore, CloudConfigMixin):
 
     def _create(self, obj, **kwargs):
         if not self._exists(obj, **kwargs):
-
             # Pull out locally used fields
             extra_dir = kwargs.get("extra_dir", None)
             extra_dir_at_root = kwargs.get("extra_dir_at_root", False)

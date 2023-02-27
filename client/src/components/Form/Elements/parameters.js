@@ -8,7 +8,6 @@ import Ui from "mvc/ui/ui-misc";
 import SelectContent from "mvc/ui/ui-select-content";
 import SelectLibrary from "mvc/ui/ui-select-library";
 import SelectFtp from "mvc/ui/ui-select-ftp";
-import RulesEdit from "mvc/ui/ui-rules-edit";
 import DataPicker from "mvc/ui/ui-data-picker";
 
 // create form view
@@ -31,14 +30,18 @@ export default Backbone.View.extend({
         data_dialog: "_fieldDialog",
     },
 
+    remove: function () {
+        this.field.remove();
+        Backbone.View.prototype.remove.call(this);
+    },
+
     /** Returns an input field for a given field type */
     create: function (input_def) {
-        const Galaxy = getGalaxyInstance();
         var fieldClass = this.types[input_def.type];
         this.field = typeof this[fieldClass] === "function" ? this[fieldClass].call(this, input_def) : null;
         if (!this.field) {
             this.field = input_def.options ? this._fieldSelect(input_def) : this._fieldText(input_def);
-            Galaxy.emit.debug("form-parameters::_addRow()", `Auto matched field type (${input_def.type}).`);
+            console.debug("form-parameters::_addRow()", `Auto matched field type (${input_def.type}).`);
         }
         if (input_def.value === undefined) {
             input_def.value = null;
@@ -194,14 +197,6 @@ export default Backbone.View.extend({
             optional: input_def.optional,
             multiple: input_def.multiple,
             onchange: input_def.onchange,
-        });
-    },
-
-    _fieldRulesEdit: function (input_def) {
-        return new RulesEdit.View({
-            id: input_def.id,
-            onchange: input_def.onchange,
-            target: input_def.target,
         });
     },
 

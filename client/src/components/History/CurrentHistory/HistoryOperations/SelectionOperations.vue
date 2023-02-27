@@ -91,7 +91,7 @@
             title-tag="h2"
             @ok="changeDbkeyOfSelected">
             <p v-localize>Select a new Database/Build for {{ numSelected }} items:</p>
-            <GenomeProvider v-slot="{ item: dbkeys, loading: loadingDbKeys }">
+            <db-key-provider v-slot="{ item: dbkeys, loading: loadingDbKeys }">
                 <SingleItemSelector
                     collection-name="Database/Builds"
                     :loading="loadingDbKeys"
@@ -99,7 +99,7 @@
                     :current-item-id="selectedDbKey"
                     class="mb-5 pb-5"
                     @update:selected-item="onSelectedDbKey" />
-            </GenomeProvider>
+            </db-key-provider>
         </b-modal>
         <b-modal
             id="change-datatype-of-selected-content"
@@ -153,15 +153,15 @@ import {
 } from "components/History/model/crud";
 import { createDatasetCollection } from "components/History/model/queries";
 import { buildCollectionModal } from "components/History/adapters/buildCollectionModal";
-import { checkFilter, getQueryDict } from "store/historyStore/model/filtering";
-import { GenomeProvider, DatatypesProvider } from "components/providers";
+import { DbKeyProvider, DatatypesProvider } from "components/providers";
 import SingleItemSelector from "components/SingleItemSelector";
 import { StatelessTags } from "components/Tags";
 import ConfigProvider from "components/providers/ConfigProvider";
+import { HistoryFilters } from "components/History/HistoryFilters";
 
 export default {
     components: {
-        GenomeProvider,
+        DbKeyProvider,
         DatatypesProvider,
         SingleItemSelector,
         StatelessTags,
@@ -185,11 +185,11 @@ export default {
     computed: {
         /** @returns {Boolean} */
         showHidden() {
-            return checkFilter(this.filterText, "visible", false);
+            return HistoryFilters.checkFilter(this.filterText, "visible", false);
         },
         /** @returns {Boolean} */
         showDeleted() {
-            return checkFilter(this.filterText, "deleted", true);
+            return HistoryFilters.checkFilter(this.filterText, "deleted", true);
         },
         /** @returns {Boolean} */
         showBuildOptions() {
@@ -265,7 +265,7 @@ export default {
         async runOnSelection(operation, extraParams = null) {
             this.$emit("update:operation-running", this.history.update_time);
             const items = this.getExplicitlySelectedItems();
-            const filters = getQueryDict(this.filterText);
+            const filters = HistoryFilters.getQueryDict(this.filterText);
             this.$emit("update:show-selection", false);
             let expectHistoryUpdate = false;
             try {
@@ -314,7 +314,7 @@ export default {
             await this.buildNewCollection("rules");
         },
         async buildNewCollection(collectionType) {
-            const modalResult = await buildCollectionModal(collectionType, this.history.id, this.contentSelection);
+            const modalResult = await buildCollectionModal(collectionType, this.contentSelection, this.history.id);
             await createDatasetCollection(this.history, modalResult);
 
             // have to hide the source items if that was requested

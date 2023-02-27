@@ -23,12 +23,12 @@ from galaxy.model import (
     User,
 )
 from galaxy.model.orm.util import add_object_to_object_session
-from ..authnz import IdentityProvider
+from . import IdentityProvider
 
 try:
     import pkce
 except ImportError:
-    pkce = None
+    pkce = None  # type: ignore[assignment]
 
 log = logging.getLogger(__name__)
 STATE_COOKIE_NAME = "galaxy-oidc-state"
@@ -243,11 +243,11 @@ class CustosAuthnz(IdentityProvider):
         except Exception as e:
             return False, f"Failed to disconnect provider {provider}: {util.unicodify(e)}", None
 
-    def logout(self, trans, post_logout_redirect_url=None):
+    def logout(self, trans, post_user_logout_href=None):
         try:
             redirect_url = self.config["end_session_endpoint"]
-            if post_logout_redirect_url is not None:
-                redirect_url += f"?redirect_uri={quote(post_logout_redirect_url)}"
+            if post_user_logout_href is not None:
+                redirect_url += f"?redirect_uri={quote(post_user_logout_href)}"
             return redirect_url
         except Exception as e:
             log.error("Failed to generate logout redirect_url", exc_info=e)
@@ -264,7 +264,6 @@ class CustosAuthnz(IdentityProvider):
         return session
 
     def _fetch_token(self, oauth2_session, trans):
-
         if self.config.get("iam_client_secret"):
             # Custos uses the Keycloak client secret to get the token
             client_secret = self.config["iam_client_secret"]

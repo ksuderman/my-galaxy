@@ -5,7 +5,7 @@
             <span class="description">{{ tool.description }}</span>
         </a>
         <a v-else :class="targetClass" :href="tool.link" :target="tool.target" @click="onClick">
-            <img v-if="tool.logo" class="logo" :src="tool.logo" />
+            <img v-if="tool.logo" class="logo" :src="tool.logo" :alt="tool.name" />
             <span class="labels">
                 <span
                     v-for="(label, index) in tool.labels"
@@ -59,9 +59,9 @@ export default {
     computed: {
         targetClass() {
             if (this.toolKey) {
-                return `tool-menu-item-${this.tool[this.toolKey]} title-link`;
+                return `tool-menu-item-${this.tool[this.toolKey]} title-link cursor-pointer`;
             } else {
-                return `title-link`;
+                return `title-link cursor-pointer`;
             }
         },
     },

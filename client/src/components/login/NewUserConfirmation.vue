@@ -1,10 +1,13 @@
 <template>
     <div class="container">
         <div class="row justify-content-md-center">
-            <div class="col" :class="{ 'col-lg-6': !isAdmin }">
-                <b-alert :show="showRegistrationWarning" variant="info" v-html="registration_warning_message">
+            <div class="col col-lg-6">
+                <b-alert :show="!!registrationWarningMessage" variant="info">
+                    {{ registrationWarningMessage }}
                 </b-alert>
-                <b-alert :show="messageShow" :variant="messageVariant" v-html="messageText" />
+                <b-alert :show="!!messageText" :variant="messageVariant">
+                    {{ messageText }}
+                </b-alert>
                 <b-form id="confirmation" @submit.prevent="submit()">
                     <b-card no-body header="Confirm new account creation">
                         <b-card-body>
@@ -15,9 +18,9 @@
                                 connect this account via <strong>User Preferences</strong>.
                                 <a
                                     href="https://galaxyproject.org/authnz/use/oidc/idps/custos/#link-an-existing-galaxy-account"
-                                    target="_blank"
-                                    >More details here.</a
-                                >
+                                    target="_blank">
+                                    More details here.
+                                </a>
                             </p>
                             <p>
                                 If you wish to continue and create a new account, select
@@ -28,28 +31,27 @@
                                 subject to termination and data deletion on public Galaxy servers. Connect existing
                                 account now to continue to use your existing data and avoid possible loss of data.
                             </p>
-
                             <b-form-group>
                                 <b-form-checkbox v-model="termsRead">
                                     I have read and accept these terms to create a new Galaxy account.
                                 </b-form-checkbox>
                             </b-form-group>
-                            <b-button name="confirm" type="submit" :disabled="!termsRead" @click.prevent="submit"
-                                >Yes, create new account</b-button
-                            >
+                            <b-button name="confirm" type="submit" :disabled="!termsRead" @click.prevent="submit">
+                                Yes, create new account
+                            </b-button>
                             <b-button name="cancel" type="submit" @click.prevent="login">No, go back to login</b-button>
                         </b-card-body>
-                        <b-card-footer v-if="!isAdmin">
+                        <b-card-footer>
                             Already have an account?
-                            <a id="login-toggle" href="javascript:void(0)" role="button" @click.prevent="login"
-                                >Log in here.</a
-                            >
+                            <a id="login-toggle" href="javascript:void(0)" role="button" @click.prevent="login">
+                                Log in here.
+                            </a>
                         </b-card-footer>
                     </b-card>
                 </b-form>
             </div>
-            <div v-if="terms_url" class="col">
-                <b-embed type="iframe" :src="terms_url" aspect="1by1" />
+            <div v-if="termsUrl" class="col">
+                <b-embed type="iframe" :src="termsUrlwithRoot" aspect="1by1" />
             </div>
         </div>
     </div>
@@ -58,71 +60,54 @@
 import axios from "axios";
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
-import { getGalaxyInstance } from "app";
-import { getAppRoot } from "onload";
+import { withPrefix } from "utils/redirect";
 
 Vue.use(BootstrapVue);
 
 export default {
     props: {
-        registration_warning_message: {
+        registrationWarningMessage: {
             type: String,
-            required: false,
+            default: null,
         },
-        redirect: {
+        termsUrl: {
             type: String,
-            required: false,
-        },
-        terms_url: {
-            type: String,
-            required: false,
+            default: null,
         },
     },
     data() {
-        const galaxy = getGalaxyInstance();
         return {
-            username: null,
-            subscribe: null,
             messageText: null,
             messageVariant: null,
-            session_csrf_token: galaxy.session_csrf_token,
-            isAdmin: galaxy.user.isAdmin(),
             termsRead: false,
         };
     },
     computed: {
-        messageShow() {
-            return this.messageText != null;
-        },
-        showRegistrationWarning() {
-            return this.registration_warning_message != null;
+        termsUrlwithRoot() {
+            return withPrefix(this.termsUrl);
         },
     },
     methods: {
         login() {
-            const rootUrl = getAppRoot();
             // set url to redirect user to 3rd party management after login
-            this.$emit("setRedirect", "user/external_ids");
-            window.location = rootUrl + "login";
+            this.$emit("setRedirect", "/user/external_ids");
+            window.location = withPrefix("/login");
         },
         submit() {
-            const rootUrl = getAppRoot();
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get("custos_token");
-
             axios
-                .post(`${rootUrl}authnz/custos/create_user?token=${token}`)
+                .post(withPrefix(`/authnz/custos/create_user?token=${token}`))
                 .then((response) => {
                     if (response.data.redirect_uri) {
                         window.location = response.data.redirect_uri;
                     } else {
-                        window.location = rootUrl;
+                        window.location = withPrefix("/");
                     }
                 })
                 .catch((error) => {
                     this.messageVariant = "danger";
                     const message = error.response.data && error.response.data.err_msg;
-
                     this.messageText = message || "Login failed for an unknown reason.";
                 });
         },

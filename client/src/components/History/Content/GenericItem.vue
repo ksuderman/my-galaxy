@@ -3,8 +3,8 @@
         <loading-span v-if="loading" message="Loading dataset" />
         <div v-else>
             <ContentItem
-                is-history-item
                 :id="item.hid"
+                is-history-item
                 :item="item"
                 :name="item.name"
                 :expand-dataset="expandDataset"
@@ -15,9 +15,7 @@
                 @undelete="onUndelete(item)"
                 @unhide="onUnhide(item)" />
             <div v-if="viewCollection">
-                <div v-for="(collectionItem, collectionIndex) in item.elements" :key="collectionIndex">
-                    <GenericElement :item="collectionItem" />
-                </div>
+                <GenericElement :dsc="item" />
             </div>
         </div>
     </component>

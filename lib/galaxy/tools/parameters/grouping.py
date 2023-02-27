@@ -40,8 +40,8 @@ URI_PREFIXES = [f"{x}://" for x in ["http", "https", "ftp", "file", "gxfiles", "
 
 
 class Group(Dictifiable):
-
     dict_collection_visible_keys = ["name", "type"]
+    type: str
 
     def __init__(self):
         self.name = None
@@ -76,7 +76,6 @@ class Group(Dictifiable):
 
 
 class Repeat(Group):
-
     dict_collection_visible_keys = ["name", "type", "title", "help", "default", "min", "max"]
     type = "repeat"
 
@@ -168,7 +167,6 @@ class Repeat(Group):
 
 
 class Section(Group):
-
     dict_collection_visible_keys = ["name", "type", "title", "help", "expanded"]
     type = "section"
 
@@ -719,7 +717,7 @@ class UploadDataset(Group):
 
 class Conditional(Group):
     type = "conditional"
-    value_from: Callable[["Conditional", ExpressionContext, "Conditional", "Tool"], Mapping[str, str]]
+    value_from: Callable[[ExpressionContext, "Conditional", "Tool"], Mapping[str, str]]
 
     def __init__(self):
         Group.__init__(self)

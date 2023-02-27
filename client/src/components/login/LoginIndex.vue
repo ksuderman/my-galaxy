@@ -1,69 +1,100 @@
 <template>
     <div>
-        <template v-if="showLogin">
-            <login-form :show_welcome_with_login="show_welcome_with_login" :welcome_url="welcome_url" />
-        </template>
-        <template v-else>
-            <register-form
-                :registration_warning_message="registration_warning_message"
-                :mailing_join_addr="mailing_join_addr"
-                :server_mail_configured="server_mail_configured"
-                :terms_url="terms_url" />
-        </template>
+        <login-form
+            v-if="showLogin"
+            :allow-user-creation="allowUserCreation"
+            :enable-oidc="enableOidc"
+            :redirect="redirect"
+            :registration-warning-message="registrationWarningMessage"
+            :session-csrf-token="sessionCsrfToken"
+            :show-welcome-with-login="showWelcomeWithLogin"
+            :terms-url="termsUrl"
+            :welcome-url="welcomeUrl"
+            @toggle-login="toggleLogin" />
+        <register-form
+            v-else
+            :enable-oidc="enableOidc"
+            :mailing-join-addr="mailingJoinAddr"
+            :prefer-custos-login="preferCustosLogin"
+            :registration-warning-message="registrationWarningMessage"
+            :show-login-link="showLoginLink"
+            :server-mail-configured="serverMailConfigured"
+            :session-csrf-token="sessionCsrfToken"
+            :terms-url="termsUrl"
+            @toggle-login="toggleLogin" />
     </div>
 </template>
 <script>
-import LoginForm from "components/login/LoginForm.vue";
-import RegisterForm from "components/login/RegisterForm.vue";
 import Vue from "vue";
 import BootstrapVue from "bootstrap-vue";
+import LoginForm from "./LoginForm";
+import RegisterForm from "./RegisterForm";
 
 Vue.use(BootstrapVue);
 
 export default {
     components: {
-        loginForm: LoginForm,
-        registerForm: RegisterForm,
+        LoginForm,
+        RegisterForm,
     },
     props: {
-        show_welcome_with_login: {
+        allowUserCreation: {
             type: Boolean,
-            required: false,
+            required: true,
         },
-        welcome_url: {
-            type: String,
-            required: false,
-        },
-        terms_url: {
-            type: String,
-            required: false,
-        },
-        registration_warning_message: {
-            type: String,
-            required: false,
-        },
-        mailing_join_addr: {
-            type: String,
-            required: false,
-        },
-        server_mail_configured: {
+        enableOidc: {
             type: Boolean,
-            required: false,
+            default: false,
+        },
+        mailingJoinAddr: {
+            type: String,
+            default: null,
+        },
+        preferCustosLogin: {
+            type: Boolean,
+            default: false,
+        },
+        redirect: {
+            type: String,
+            default: null,
+        },
+        registrationWarningMessage: {
+            type: String,
+            default: null,
+        },
+        showLoginLink: {
+            type: Boolean,
+            default: true,
+        },
+        sessionCsrfToken: {
+            type: String,
+            required: true,
+        },
+        serverMailConfigured: {
+            type: Boolean,
+            default: false,
+        },
+        showWelcomeWithLogin: {
+            type: Boolean,
+            default: false,
+        },
+        termsUrl: {
+            type: String,
+            default: null,
+        },
+        welcomeUrl: {
+            type: String,
+            default: null,
         },
     },
     data() {
         return {
-            login: true,
+            showLogin: true,
         };
     },
-    computed: {
-        showLogin: function () {
-            return this.login;
-        },
-    },
     methods: {
-        toggleLogin: function () {
-            this.login = !this.login;
+        toggleLogin() {
+            this.showLogin = !this.showLogin;
         },
     },
 };
