@@ -21,7 +21,7 @@ jobs:
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Get the version number from the branch name
         id: branch
-        run: echo "name=$(echo ${{ github.ref_name }}/release_/)" >> $GITHUB_OUTPUT
+        run: echo "name=$(echo ${{ github.ref_name }} | sed 's/release_//')" >> $GITHUB_OUTPUT
 
       - name: Don't build and push release_* images if the image already exists
         if: contains('refs/heads/release_', github.ref)
