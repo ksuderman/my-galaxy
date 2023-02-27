@@ -2,8 +2,8 @@ name: Build and Push Container Image
 on:
   push:
     branches:
-      - 'krelease*'
-      - kdev
+      - 'release*'
+      - dev
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -13,25 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository_owner == 'ksuderman'
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Get short SHA for this commit
         id: commit
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-      - name: Set branch name
+      - name: Get the version number from the branch name
         id: branch
-        run: echo "name=$(echo ${{ github.ref_name }}/krelease_/)" >> $GITHUB_OUTPUT
+        run: echo "name=$(echo ${{ github.ref_name }}/release_/)" >> $GITHUB_OUTPUT
 
       - name: Don't build and push release_* images if the image already exists
-        if: contains('refs/heads/krelease_', github.ref)
+        if: contains('refs/heads/release_', github.ref)
         run: |
-          code=$(/usr/bin/curl -s -w "%{http_code}" -o /dev/null https://hub.docker.com/v2/repositories/ksuderman/galaxy-min/tags/${{ steps.branch.outputs.name }})
+          code=$(/usr/bin/curl -s -w "%{http_code}" -o /dev/null https://hub.docker.com/v2/repositories/${{ github.repository_owner }}/galaxy-min/tags/${{ steps.branch.outputs.name }})
           if [[ $code == 200 ]] ; then
             echo "Release image exists. Skipping the Docker build.
             exit 1
           fi
 
-      # Log in to all repos we will push to.
+      # Log in to all the repos we will push to.
 
       - name: Login to DockerHub
         uses: actions-hub/docker/login@master
