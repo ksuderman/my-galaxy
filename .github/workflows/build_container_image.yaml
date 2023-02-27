@@ -2,8 +2,7 @@ name: Build Container Image
 on:
   push:
     branches:
-      - 'release*'
-      - dev
+      - never
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
