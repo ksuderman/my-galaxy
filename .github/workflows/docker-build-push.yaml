@@ -51,7 +51,7 @@ jobs:
         with:
           context: .
           push: true
-          dockerfile: .k8s_ci.Dockerfile
+          file: .k8s_ci.Dockerfile
           tags: |
             ksuderman/galaxy-min:${{ steps.branch.outputs.name }}
             ksuderman/galaxy-k8s-auto:${{ steps.commit.outputs.sha }}
